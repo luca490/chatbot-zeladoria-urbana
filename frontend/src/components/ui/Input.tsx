@@ -17,12 +17,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           className={cn(
-            "w-full bg-black/40 border border-[var(--color-border)] text-white rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all placeholder:text-[var(--color-muted)]",
+            "w-full bg-black/5 dark:bg-black/40 border border-[var(--color-border)] text-[var(--color-foreground)] rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all placeholder:text-[var(--color-muted)]",
             icon && "pl-10",
             className
           )}
           {...props}
         />
+
       </div>
     );
   }
