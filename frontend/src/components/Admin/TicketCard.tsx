@@ -30,6 +30,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onClick, isUrgen
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
+      layout
       onClick={() => onClick(ticket)}
       className={cn(
         "border rounded-xl p-5 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between transition-all cursor-pointer group",
@@ -40,7 +41,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onClick, isUrgen
     >
       <div className="space-y-1 flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2 mb-2">
-          <span className="text-sm font-bold font-display text-white tracking-widest uppercase">
+          <span className="text-sm font-bold font-display text-[var(--color-foreground)] tracking-widest uppercase">
             #{ticket.protocol}
           </span>
           
@@ -69,17 +70,18 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onClick, isUrgen
           </span>
         </div>
         
-        <p className="text-white/90 text-sm md:text-base leading-relaxed line-clamp-2 break-words">
+        <p className="text-[var(--color-foreground)]/90 text-sm md:text-base leading-relaxed line-clamp-2 break-words">
           {getBriefDescription(ticket.description)}
         </p>
         
         <p className="text-[var(--color-muted)] text-sm truncate">
-          Reportado por <strong className="text-white/70">{ticket.user_name}</strong>
+          Reportado por <strong className="text-[var(--color-foreground)]/70">{ticket.user_name}</strong>
           {ticket.report_count && ticket.report_count > 1 ? (
             <span> e mais {ticket.report_count - 1} pessoa{ticket.report_count - 1 > 1 ? 's' : ''}</span>
           ) : null}
         </p>
       </div>
+
 
       <div className={cn(
         "font-bold text-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap",
