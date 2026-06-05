@@ -13,7 +13,7 @@ async function handleChatMessage(socket, data, io) {
   if (isInitial) {
     userSessions.set(socket.id, { history: [] });
     socket.emit('bot_response', {
-      text: `Olá, ${user.name}! Sou o assistente do Zeladoria Diadema. Por favor, descreva qual o problema de zeladoria (ex: vazamento, poste apagado) e onde ele está. Se quiser, você também pode anexar uma foto!`,
+      text: `Olá, ${user.name}! Sou o assistente do Zeladoria Diadema. Por favor, descreva qual o problema de zeladoria ou saúde pública (ex: vazamento, poste apagado, foco de dengue, zoonose/animal doente) e onde ele está. Se quiser, você também pode anexar uma foto!`,
       isStream: false
     });
     return;
@@ -46,7 +46,8 @@ async function handleChatMessage(socket, data, io) {
       
       let rawExistingDescription = existingTicket.description || "";
       rawExistingDescription = rawExistingDescription.replace(/\[RESUMO_IA\][\s\S]*?\[\/RESUMO_IA\]\n\n/, "");
-      const newDescriptionText = `\n\n--- Relato Adicional de ${user.name} (${user.phone}) ---\n${message}`;
+      const userReport = aiResult.relato_usuario || message;
+      const newDescriptionText = `\n\n--- Relato Adicional de ${user.name} (${user.phone}) ---\n${userReport}`;
       const allReportsText = rawExistingDescription + newDescriptionText;
 
       const aiSummary = await groqService.generateAISummary(allReportsText);
@@ -81,7 +82,8 @@ async function handleChatMessage(socket, data, io) {
   if (aiResult.criar_chamado) {
     const protocol = crypto.randomBytes(4).toString('hex').toUpperCase();
 
-    const initialReportText = `--- Relato Original de ${user.name} (${user.phone}) ---\n${message}`;
+    const userReport = aiResult.relato_usuario || message;
+    const initialReportText = `--- Relato Original de ${user.name} (${user.phone}) ---\n${userReport}`;
     const aiSummary = await groqService.generateAISummary(initialReportText);
     const finalDescription = `[RESUMO_IA]\n${aiSummary}\n[/RESUMO_IA]\n\n${initialReportText}`;
 
@@ -156,7 +158,7 @@ async function handleAudioMessage(socket, data, io) {
     }
 
     const chatData = {
-      message: `[Áudio Transcrito]: ${transcribedText}`,
+      message: transcribedText,
       user: user,
       isInitial: false
     };
