@@ -10,35 +10,35 @@ const ticketController = require('./controllers/ticketController');
 const app = express();
 const server = http.createServer(app);
 
-// Libera o CORS pra não dar erro no front e prepara o Express pra entender JSON
+// Configuração de CORS e middleware para parsing de requisições JSON
 app.use(cors());
 app.use(express.json());
 
-// Prepara o Socket.io pra conseguir receber e mandar mensagens em tempo real sem precisar de F5
+// Inicialização do servidor Socket.io para comunicação em tempo real
 const io = new Server(server, {
-  maxHttpBufferSize: 1e8, // Aumenta o limite para 100MB para aceitar fotos de celular (Base64)
+  maxHttpBufferSize: 1e8, // Limite máximo do buffer de 100MB para tráfego de imagens em Base64
   cors: {
     origin: '*',
     methods: ['GET', 'POST']
   }
 });
 
-// Rotas HTTP da API REST
+// Definição das rotas REST para gerenciamento de chamados
 app.get('/api/tickets', ticketController.getTickets);
 app.get('/api/tickets/user/:phone', ticketController.getUserTickets);
 app.put('/api/tickets/:id/status', ticketController.updateTicketStatus);
 app.put('/api/tickets/:id/priority', ticketController.updateTicketPriority);
 
-// Toda vez que alguém entra na página, essa conexão é disparada
+// Event listener para novas conexões WebSocket
 io.on('connection', (socket) => {
   console.log('Novo usuário conectado:', socket.id);
 
-  // Repassa a mensagem pro controller que vai falar com a IA e decidir o que fazer
+  // Processamento e análise inteligente de mensagens de texto
   socket.on('chat_message', async (data) => {
     await chatController.handleChatMessage(socket, data, io);
   });
 
-  // Repassa a mensagem de áudio para ser transcrita e tratada pela IA
+  // Transcrição e tratamento de mensagens de áudio
   socket.on('audio_message', async (data) => {
     await chatController.handleAudioMessage(socket, data, io);
   });
