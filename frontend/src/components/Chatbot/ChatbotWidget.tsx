@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Send, Image as ImageIcon, MapPin, Loader2, X, CheckCircle2, Ticket, Mic, Square, Navigation, Play, ArrowLeft } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { DiademaFlag } from "@/components/ui/DiademaFlag";
 
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -32,7 +33,11 @@ type Message = {
   transcription?: string;
 };
 
-export default function ChatbotWidget() {
+interface ChatbotWidgetProps {
+  onBack?: () => void;
+}
+
+export default function ChatbotWidget({ onBack }: ChatbotWidgetProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [image, setImage] = useState<File | null>(null);
@@ -48,7 +53,7 @@ export default function ChatbotWidget() {
 
   const [showHistory, setShowHistory] = useState(false);
 
-  // Audio state
+  // Gerenciamento de estado da gravação de áudio do microfone
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -319,6 +324,16 @@ export default function ChatbotWidget() {
     setSelectedLocation(null);
   };
 
+  const handleBackWithConfirmation = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    if (onBack) {
+      const confirmBack = window.confirm("Essa ação fará você voltar para a tela inicial. Tem certeza que você deseja isso?");
+      if (confirmBack) {
+        onBack();
+      }
+    }
+  };
+
   if (!user) {
     return (
       <motion.div
@@ -326,7 +341,17 @@ export default function ChatbotWidget() {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md mx-auto p-8 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl"
       >
-        <h2 className="text-2xl font-display font-bold mb-2 text-white">Identifique-se</h2>
+        {onBack && (
+          <button
+            type="button"
+            onClick={handleBackWithConfirmation}
+            className="mb-4 flex items-center gap-2 text-xs font-semibold text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors border border-[var(--color-border)] px-3 py-1.5 rounded-lg bg-black/5 dark:bg-black/20 hover:bg-black/10 dark:hover:bg-black/40"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Voltar ao Início
+          </button>
+        )}
+        <h2 className="text-2xl font-display font-bold mb-2 text-[var(--color-foreground)]">Identifique-se</h2>
         <p className="text-[var(--color-muted)] mb-6 text-sm">Precisamos de seus dados para registrar e acompanhar o seu chamado.</p>
 
         <form onSubmit={handleStart} className="space-y-4">
@@ -365,13 +390,22 @@ export default function ChatbotWidget() {
       animate={{ opacity: 1, scale: 1 }}
       className="flex flex-col relative w-full max-w-2xl mx-auto h-[600px] max-h-[80vh] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl overflow-hidden"
     >
-      <div className="p-4 border-b border-[var(--color-border)] bg-black/20 flex items-center justify-between relative z-50">
+      <div className="p-4 border-b border-[var(--color-border)] bg-black/5 dark:bg-black/20 flex items-center justify-between relative z-50">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[var(--color-accent)] flex items-center justify-center text-black font-bold text-xl">
-            Z
+          {onBack && (
+            <button
+              onClick={handleBackWithConfirmation}
+              className="p-2 -ml-1 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
+              title="Voltar ao início"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          <div className="w-10 h-10 rounded-full overflow-hidden border border-[var(--color-border)] shadow-sm shrink-0 flex items-center justify-center bg-[var(--color-surface)]">
+            <DiademaFlag className="w-full h-full scale-110 object-cover border-none shadow-none rounded-none" />
           </div>
           <div>
-            <h3 className="font-display font-bold text-white leading-tight">Zeladoria Diadema</h3>
+            <h3 className="font-display font-bold text-[var(--color-foreground)] leading-tight">Zeladoria Diadema</h3>
             <p className="text-xs text-[var(--color-accent)] flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse"></span> Online
             </p>
@@ -388,7 +422,7 @@ export default function ChatbotWidget() {
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-transparent to-black/10">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-transparent to-[var(--color-border)]/10">
         <AnimatePresence>
           {messages.map((msg) => (
             <motion.div
@@ -398,19 +432,19 @@ export default function ChatbotWidget() {
               className={cn(
                 "max-w-[80%] rounded-2xl px-4 py-3",
                 msg.sender === "user"
-                  ? "bg-[var(--color-accent)] text-black ml-auto rounded-br-sm"
-                  : "bg-black/40 text-white border border-[var(--color-border)] rounded-bl-sm"
+                  ? "bg-[var(--color-accent)] text-white ml-auto rounded-br-sm"
+                  : "bg-[var(--color-border)]/40 text-[var(--color-foreground)] border border-[var(--color-border)] rounded-bl-sm"
               )}
             >
               {msg.isLocation && msg.locationText && (
-                <div className="bg-[#0b141a] rounded-lg overflow-hidden border border-[#202c33] max-w-[280px] shadow-sm cursor-pointer mb-2">
-                  <div className="h-28 w-full bg-[#111b21] relative flex items-center justify-center">
+                <div className="bg-[var(--color-surface)] rounded-lg overflow-hidden border border-[var(--color-border)] max-w-[280px] shadow-sm cursor-pointer mb-2">
+                  <div className="h-28 w-full bg-[var(--color-border)]/50 relative flex items-center justify-center">
                     <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M10 10h80v80H10z\' fill=\'none\' stroke=\'%23333\' stroke-width=\'2\'/%3E%3Cpath d=\'M30 30l40 40M70 30L30 70\' stroke=\'%23333\' stroke-width=\'2\'/%3E%3C/svg%3E")', backgroundSize: 'cover' }}></div>
                     <MapPin className="w-8 h-8 text-red-500 relative z-10 drop-shadow-lg" fill="#ef4444" />
                   </div>
-                  <div className="p-3 bg-black/40">
+                  <div className="p-3 bg-black/5 dark:bg-black/40">
                     <p className="text-[var(--color-accent)] font-semibold text-xs uppercase tracking-wider mb-1">Localização Selecionada</p>
-                    <p className="text-white/90 text-xs mt-1 line-clamp-2">{msg.locationText}</p>
+                    <p className="text-[var(--color-foreground)]/90 text-xs mt-1 line-clamp-2">{msg.locationText}</p>
                   </div>
                 </div>
               )}
@@ -443,7 +477,7 @@ export default function ChatbotWidget() {
         {isTyping && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="bg-black/40 text-[var(--color-muted)] border border-[var(--color-border)] rounded-2xl rounded-bl-sm px-4 py-3 max-w-fit flex items-center gap-2"
+            className="bg-[var(--color-border)]/30 text-[var(--color-muted)] border border-[var(--color-border)] rounded-2xl rounded-bl-sm px-4 py-3 max-w-fit flex items-center gap-2"
           >
             <Loader2 className="w-4 h-4 animate-spin" />
             <span className="text-sm">Analisando...</span>
@@ -452,7 +486,7 @@ export default function ChatbotWidget() {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 bg-black/20 border-t border-[var(--color-border)]">
+      <div className="p-4 bg-[var(--color-border)]/20 border-t border-[var(--color-border)]">
         {(image || selectedLocation) && (
           <div className="mb-3 flex flex-wrap gap-2">
             {image && (
@@ -467,14 +501,14 @@ export default function ChatbotWidget() {
               </div>
             )}
             {selectedLocation && (
-              <div className="relative inline-flex items-center gap-2 bg-[#0b141a] border border-[#202c33] rounded-lg p-2 pr-4 shadow-sm h-16 max-w-[200px]">
-                <div className="h-full w-12 bg-[#111b21] rounded relative flex items-center justify-center overflow-hidden shrink-0">
+              <div className="relative inline-flex items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-2 pr-4 shadow-sm h-16 max-w-[200px]">
+                <div className="h-full w-12 bg-[var(--color-border)]/50 rounded relative flex items-center justify-center overflow-hidden shrink-0">
                   <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M10 10h80v80H10z\' fill=\'none\' stroke=\'%23333\' stroke-width=\'2\'/%3E%3Cpath d=\'M30 30l40 40M70 30L30 70\' stroke=\'%23333\' stroke-width=\'2\'/%3E%3C/svg%3E")', backgroundSize: 'cover' }}></div>
                   <MapPin className="w-5 h-5 text-red-500 relative z-10" fill="#ef4444" />
                 </div>
                 <div className="flex flex-col justify-center overflow-hidden">
                   <span className="text-[var(--color-accent)] font-semibold text-[10px] uppercase">Local Selecionado</span>
-                  <span className="text-white text-xs line-clamp-1">{selectedLocation}</span>
+                  <span className="text-[var(--color-foreground)] text-xs line-clamp-1">{selectedLocation}</span>
                 </div>
                 <button
                   onClick={() => setSelectedLocation(null)}
@@ -487,8 +521,8 @@ export default function ChatbotWidget() {
           </div>
         )}
 
-        <div className="flex items-end gap-2">
-          <label title="Anexar Imagem" className="cursor-pointer p-3 rounded-full hover:bg-white/5 text-[var(--color-muted)] hover:text-white transition-colors">
+        <div className="flex items-center gap-2">
+          <label title="Anexar Imagem" className="cursor-pointer p-3 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
             <input
               type="file"
               accept="image/*"
@@ -500,7 +534,7 @@ export default function ChatbotWidget() {
           <button 
             title="Anexar Localização"
             onClick={() => setShowLocationModal(true)}
-            className="p-3 rounded-full hover:bg-white/5 text-[var(--color-muted)] hover:text-white transition-colors"
+            className="p-3 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
           >
             <MapPin className="w-6 h-6" />
           </button>
@@ -527,7 +561,7 @@ export default function ChatbotWidget() {
                   }
                 }}
                 placeholder="Descreva o problema ou envie um áudio..."
-                className="w-full h-[52px] bg-black/40 border border-[var(--color-border)] rounded-xl px-4 py-3.5 pl-4 pr-12 text-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] resize-none transition-all leading-tight"
+                className="w-full h-[52px] bg-black/5 dark:bg-black/40 border border-[var(--color-border)] rounded-xl px-4 py-3.5 pl-4 pr-12 text-[var(--color-foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] resize-none transition-all leading-tight placeholder:text-[var(--color-muted)]"
               />
               {!input.trim() && !image ? (
                 <button
@@ -542,7 +576,7 @@ export default function ChatbotWidget() {
                   title="Enviar"
                   onClick={handleSend}
                   disabled={!input.trim() && !image}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-[var(--color-accent)] text-black rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-[var(--color-accent)] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -552,7 +586,6 @@ export default function ChatbotWidget() {
         </div>
       </div>
 
-      {/* Tela de Histórico do Cidadão */}
       <AnimatePresence>
         {showHistory && (
           <motion.div
@@ -563,7 +596,7 @@ export default function ChatbotWidget() {
             className="absolute inset-0 bg-[var(--color-surface)] z-40 flex flex-col pt-[72px]"
           >
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <h4 className="text-white font-bold font-display text-xl mb-4">Meus Protocolos</h4>
+              <h4 className="text-[var(--color-foreground)] font-bold font-display text-xl mb-4">Meus Protocolos</h4>
               {userTickets.length === 0 ? (
                 <div className="text-center text-[var(--color-muted)] py-10">
                   <Ticket className="w-12 h-12 mx-auto mb-3 opacity-20" />
@@ -571,9 +604,9 @@ export default function ChatbotWidget() {
                 </div>
               ) : (
                 userTickets.map(ticket => (
-                  <div key={ticket.id} className="bg-black/40 border border-[var(--color-border)] rounded-xl p-4">
+                  <div key={ticket.id} className="bg-[var(--color-border)]/20 border border-[var(--color-border)] rounded-xl p-4">
                     <div className="flex justify-between items-start mb-2">
-                      <span className="text-sm font-bold text-white font-display uppercase">#{ticket.protocol}</span>
+                      <span className="text-sm font-bold text-[var(--color-foreground)] font-display uppercase">#{ticket.protocol}</span>
                       <span className={cn("text-xs font-bold px-2 py-0.5 rounded-full border", getStatusColor(ticket.status))}>
                         {ticket.status}
                       </span>
@@ -592,7 +625,6 @@ export default function ChatbotWidget() {
         )}
       </AnimatePresence>
 
-      {/* Modal de Chamado Criado */}
       <AnimatePresence>
         {generatedProtocol && (
           <motion.div
@@ -602,7 +634,7 @@ export default function ChatbotWidget() {
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
             onClick={() => {
               setGeneratedProtocol(null);
-              fetchUserTickets(); // refresh history just in case
+              fetchUserTickets(); // Atualiza a listagem de chamados do usuário
             }}
           >
             <motion.div
@@ -614,9 +646,9 @@ export default function ChatbotWidget() {
               <div className="w-16 h-16 bg-[var(--color-accent)]/20 text-[var(--color-accent)] rounded-full flex items-center justify-center mx-auto mb-2">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-display font-bold text-white">Chamado Registrado!</h3>
+              <h3 className="text-xl font-display font-bold text-[var(--color-foreground)]">Chamado Registrado!</h3>
               
-              <div className="bg-black/50 border border-white/5 rounded-xl p-4 my-4">
+              <div className="bg-[var(--color-border)]/35 border border-[var(--color-border)] rounded-xl p-4 my-4">
                 <p className="text-xs text-[var(--color-muted)] uppercase tracking-wider mb-1">Seu Protocolo</p>
                 <div className="flex items-center justify-center gap-2 text-2xl font-display font-bold text-[var(--color-accent)]">
                   <Ticket className="w-5 h-5" />
@@ -624,8 +656,8 @@ export default function ChatbotWidget() {
                 </div>
               </div>
 
-              <div className="text-sm text-[var(--color-muted)] space-y-2 text-left bg-white/5 p-4 rounded-xl">
-                <p className="font-bold text-white mb-2">O que acontece agora?</p>
+              <div className="text-sm text-[var(--color-muted)] space-y-2 text-left bg-[var(--color-border)]/20 p-4 rounded-xl">
+                <p className="font-bold text-[var(--color-foreground)] mb-2">O que acontece agora?</p>
                 <ul className="list-disc pl-4 space-y-1">
                   <li>A equipe da prefeitura já recebeu seu relato.</li>
                   <li>Sempre que houver novidades, você será avisado no WhatsApp.</li>
@@ -657,10 +689,10 @@ export default function ChatbotWidget() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[var(--color-surface)] border border-[var(--color-border)] text-white sm:rounded-2xl w-full max-w-sm shadow-2xl cursor-default flex flex-col overflow-hidden max-h-[80vh]"
+              className="bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-foreground)] sm:rounded-2xl w-full max-w-sm shadow-2xl cursor-default flex flex-col overflow-hidden max-h-[80vh]"
             >
               <div className="flex items-center gap-4 p-4 border-b border-[var(--color-border)]">
-                <button onClick={() => setShowLocationModal(false)}><ArrowLeft className="w-6 h-6 text-white cursor-pointer" /></button>
+                <button onClick={() => setShowLocationModal(false)}><ArrowLeft className="w-6 h-6 text-[var(--color-foreground)] cursor-pointer" /></button>
                 <h3 className="text-lg font-bold flex-1 font-display">Enviar localização</h3>
               </div>
               
@@ -674,8 +706,7 @@ export default function ChatbotWidget() {
                   marginHeight={0} 
                   marginWidth={0} 
                   src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapCenter.bbox}&amp;layer=mapnik&amp;marker=${mapCenter.lat}%2C${mapCenter.lon}`}
-                  className="absolute inset-0 opacity-80"
-                  style={{ filter: 'invert(90%) hue-rotate(180deg)' }}
+                  className="absolute inset-0 opacity-80 map-iframe"
                 ></iframe>
               </div>
 
@@ -711,13 +742,13 @@ export default function ChatbotWidget() {
                       <button 
                         key={`res-${i}`}
                         onClick={() => { setSelectedLocation(`${loc.address}`); setShowLocationModal(false); setSearchResults([]); setCustomLocation(""); }}
-                        className="flex items-center gap-3 px-4 py-2 w-full hover:bg-white/5 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2 w-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                       >
                         <div className="w-8 h-8 rounded-full bg-[var(--color-accent)]/10 flex items-center justify-center text-[var(--color-accent)] border border-[var(--color-accent)]/20 shrink-0">
                           <MapPin className="w-4 h-4" />
                         </div>
                         <div className="text-left flex-1 border-b border-[var(--color-border)] pb-2">
-                          <p className="text-sm font-bold text-white line-clamp-1">{loc.address.split(',')[0]}</p>
+                          <p className="text-sm font-bold text-[var(--color-foreground)] line-clamp-1">{loc.address.split(',')[0]}</p>
                           <p className="text-xs text-[var(--color-muted)] truncate max-w-[260px]">{loc.address}</p>
                         </div>
                       </button>
@@ -732,13 +763,13 @@ export default function ChatbotWidget() {
                 <button 
                   onClick={handleCurrentLocationClick}
                   disabled={isGettingLocation}
-                  className="flex items-center gap-3 px-4 py-2 w-full hover:bg-white/5 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-3 px-4 py-2 w-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
                 >
                   <div className="w-8 h-8 rounded-full bg-[var(--color-accent)]/20 flex items-center justify-center shrink-0">
                     {isGettingLocation ? <Loader2 className="w-4 h-4 text-[var(--color-accent)] animate-spin" /> : <Navigation className="w-4 h-4 text-[var(--color-accent)]" />}
                   </div>
                   <div className="text-left flex-1 border-b border-[var(--color-border)] pb-2">
-                    <p className="text-sm font-bold text-white">
+                    <p className="text-sm font-bold text-[var(--color-foreground)]">
                       {isGettingLocation ? "Buscando localização..." : "Enviar minha Localização GPS"}
                     </p>
                   </div>
@@ -753,13 +784,13 @@ export default function ChatbotWidget() {
                   <button 
                     key={i}
                     onClick={() => { setSelectedLocation(`${loc.name} - ${loc.address}`); setShowLocationModal(false); }}
-                    className="flex items-center gap-3 px-4 py-2 w-full hover:bg-white/5 transition-colors"
+                    className="flex items-center gap-3 px-4 py-2 w-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                   >
-                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/50 border border-[var(--color-border)] shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-[var(--color-foreground)]/50 border border-[var(--color-border)] shrink-0">
                       <MapPin className="w-4 h-4" />
                     </div>
                     <div className="text-left flex-1 border-b border-[var(--color-border)] pb-2">
-                      <p className="text-sm font-bold text-white">{loc.name}</p>
+                      <p className="text-sm font-bold text-[var(--color-foreground)]">{loc.name}</p>
                       <p className="text-xs text-[var(--color-muted)] truncate max-w-[260px]">{loc.address}</p>
                     </div>
                   </button>
