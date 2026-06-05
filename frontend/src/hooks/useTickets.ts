@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Ticket } from '@/components/Admin/TicketCard';
 
 export function useTickets(phone?: string) {
+  // Estado para gerenciar a lista de chamados e status de carregamento
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
 
