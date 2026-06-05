@@ -33,9 +33,11 @@ Durante o desenvolvimento, o foco principal foi construir uma arquitetura limpa,
 
 ## 4. Funcionalidades Principais: Como Funcionam e Por Que Foram Adicionadas
 
-### 4.1. Restrição Geográfica (Apenas Diadema)
-- **Por que foi adicionado?** Um sistema de zeladoria municipal só tem utilidade se os chamados pertencerem ao município em questão. Se um cidadão tentar relatar um problema em São Bernardo do Campo, a prefeitura de Diadema não terá jurisdição para atuar.
-- **Como funciona:** O chatbot faz uma validação lógica cruzando a intenção do usuário ou as coordenadas enviadas com os limites de Diadema. Se o problema reportado for fora da cidade, o bot informa amigavelmente que o serviço é exclusivo para Diadema e não registra o chamado indevido no banco de dados.
+### 4.1. Restrição Geográfica Rigorosa (Exclusivo Diadema)
+- **Por que foi adicionado?** Um sistema de zeladoria municipal só tem utilidade se os chamados pertencerem ao município em questão. Se um cidadão tentar relatar um problema em outra cidade (ex: São Bernardo do Campo, São Paulo, etc.), a prefeitura de Diadema não terá jurisdição nem equipe para atuar.
+- **Como funciona:** O sistema possui uma **dupla camada de validação geográfica** para garantir que chamados fora do município sejam barrados imediatamente:
+  1. **Camada de Geolocalização e Mapa (GPS/Nominatim/Photon):** Quando o usuário busca ou envia um ponto geográfico, o frontend cruza e exibe apenas locais que respondam a coordenadas geográficas próximas ao município. Além disso, as opções rápidas sugerem marcos oficiais de Diadema.
+  2. **Camada de Inteligência Artificial (Groq/Llama-3.3):** A IA atua como um validador rígido do contexto em linguagem natural. Nas instruções do sistema do modelo (`REGRA 1 - LOCALIZAÇÃO`), se o local mencionado ou enviado pelo cidadão for identificado como inexistente em Diadema ou pertencente a outra cidade, a IA interrompe o fluxo de criação. O backend recebe a resposta da IA com a propriedade `criar_chamado: false`, o bot responde educadamente que o serviço é exclusivo de Diadema e o registro do chamado no banco de dados (Supabase) é completamente impedido.
 
 ### 4.2. Painel Administrativo e Escalonamento de Urgência
 - **Por que foi adicionado?** O administrador precisa visualizar o que é mais crítico de relance para despachar equipes.
@@ -74,24 +76,109 @@ Durante o desenvolvimento, o foco principal foi construir uma arquitetura limpa,
 - **Por que foi adicionado?** Para que o cidadão perceba que o sistema está respondendo aos seus comandos, evitando cliques duplos e ansiedade (ex: não saber se o bot travou ou está "pensando").
 - **Como funciona:** Utilizando animações fluídas (como *Framer Motion*), foram criados os estados de "digitando...", transições suaves para mensagens que chegam e rolagem automática no chat. Isso torna a conversa mais orgânica, similar aos aplicativos de mensagem reais que o cidadão já está acostumado a usar.
 
+### 4.11. Identidade Visual Municipal e Modos Claro/Escuro
+- **Por que foi adicionado?** Para estreitar a conexão do cidadão com os canais municipais oficiais, o sistema adota as cores da bandeira de Diadema e oferece suporte a Modo Claro e Modo Escuro visando **garantir maior acessibilidade** para cidadãos com diferentes necessidades visuais ou que acessem a plataforma em variadas condições de iluminação.
+- **Como funciona:** 
+  - **Paleta de Cores e Favicon:** A interface foi modelada com a paleta oficial da bandeira de Diadema (tons de azul-escuro, azul-celeste e branco). A bandeira de Diadema foi incorporada em locais estratégicos das páginas, no avatar do chatbot e no próprio favicon da aplicação.
+  - **Suporte a Modo Claro e Escuro:** A plataforma possui um sistema de troca de temas que armazena a preferência do usuário no `localStorage` e a inicializa instantaneamente no servidor para evitar oscilações de tela (*flickering*).
+  - **Harmonização Estética:** Todos os ícones funcionais do sistema, como o alternador de temas (sol/lua) e botões, adaptam-se dinamicamente ao tema selecionado (por exemplo, o ícone de sol assume a cor branca no tema escuro, e a lua adapta-se ao tema claro), combinando com as variáveis CSS de cor de primeiro plano do sistema (`var(--color-foreground)`).
+
+### 4.12. Histórico de Chamados do Cidadão (Meus Chamados)
+- **Por que foi adicionado?** Para permitir que o cidadão acompanhe o andamento de seus relatos anteriores sem a necessidade de ligar para a prefeitura ou guardar papéis físicos.
+- **Como funciona:** O chatbot possui um painel lateral dinâmico de histórico ("Meus Chamados"). Ao ser aberto, ele faz uma consulta ao banco de dados utilizando o número de telefone do cidadão, listando em tempo real todos os chamados abertos por ele, seus respectivos protocolos, resumos e status de resolução atualizados.
+
+### 4.13. Envio de Evidências Visuais (Fotos de Ocorrências)
+- **Por que foi adicionado?** Uma imagem ajuda a equipe da prefeitura a avaliar a gravidade do problema (por exemplo, a profundidade de um buraco ou a extensão de um vazamento de água) antes de enviar a equipe ao local.
+- **Como funciona:** O cidadão pode anexar uma foto diretamente pelo chat. A foto é convertida para base64 e enviada via WebSockets ao servidor, que faz o upload seguro para o Supabase Storage Bucket e salva a URL pública no registro do chamado. Os administradores podem visualizar a foto em alta resolução diretamente pelo modal de detalhes do painel.
+
+### 4.14. Autenticação e Proteção do Painel Administrativo
+- **Por que foi adicionado?** A gestão de status de obras e a visualização de dados de cidadãos são restritas a funcionários públicos autorizados da prefeitura.
+- **Como funciona:** O painel administrativo (/admin) possui uma tela de login com animação inteligente de erro (efeito shake). O acesso só é concedido mediante a inserção da credencial administrativa correta, protegendo as rotas de triagem e visualização do dashboard.
+
 ---
 
 ## 5. Arquitetura do Sistema e Tecnologias
 
-O projeto usa o padrão Monorepo com comunicação via REST e WebSockets.
+O projeto utiliza a arquitetura de **Monorepo**, estruturado de forma desacoplada para otimizar os fluxos de trabalho e deploys independentes. A comunicação entre a interface (cliente) e o servidor baseia-se em uma **API REST tradicional** combinada com **canais de comunicação persistentes via WebSockets**.
 
-### Frontend (Next.js, React, Tailwind CSS)
-- Utiliza **React Hooks** (`useState`, `useEffect`, `useRef`) para gerenciar o estado complexo das mensagens e scroll automático.
-- Foram isolados **Custom Hooks** (`useSocket` e `useTickets`) para limpar o código da interface e manter a responsabilidade única.
+```mermaid
+graph TD
+    Citizen["Cidadão (Chatbot/Client)"] <-->|REST HTTP & WebSockets| Server["Servidor Node.js (Express/Socket.io)"]
+    Admin["Prefeitura (Painel Admin)"] <-->|REST HTTP & WebSockets| Server
+    Server <-->|Queries SQL| DB[(Supabase PostgreSQL)]
+    Server -->|Upload de Mídia| Storage[(Supabase Storage)]
+    Server <-->|API Whisper & Llama-3.3| Groq[Groq Cloud API]
+    Server -->|Webhook de Status| n8n[Workflow n8n]
+    n8n -->|CallMeBot API| WhatsApp["WhatsApp do Cidadão"]
+```
 
-### Backend (Node.js, Express, Socket.io)
-- Fornece as rotas da API, lida com processamento assíncrono de triagem, converte áudio, despacha os webhooks e mantém o canal WebSocket persistente.
+### 5.1. Frontend (Next.js, React, Tailwind CSS)
+* **Estrutura de Rotas (Next.js App Router):** Adota a estrutura de rotas baseada em arquivos (`app/page.tsx` para o chat/landing page e `app/admin/page.tsx` para o painel administrativo).
+* **Gerenciamento de Estado Reativo:** Utiliza hooks nativos do React (`useState`, `useEffect`, `useRef`) para gerenciar as mensagens do chatbot, preenchimento de campos de formulário, e rolagem automática suave do chat.
+* **Componentização e Reutilização:** Componentes modulares reutilizáveis em `src/components/ui` (Button, Input) e componentes específicos de domínio em `src/components/Admin` e `src/components/Chatbot`.
+* **Abstração de Efeitos (Custom Hooks):** Isolamento de lógicas de infraestrutura:
+  * `useSocket`: Gerencia a conexão com o servidor WebSocket, ouvindo e emitindo eventos de chamados e conversas.
+  * `useTickets`: Gerencia a comunicação HTTP REST com o backend para buscar e manipular chamados da prefeitura e do cidadão.
+* **Design de Tema com Tailwind CSS v4:** Definição de cores semânticas usando variáveis CSS nativas que mudam dinamicamente no atributo `data-theme="light"` ou `data-theme="dark"` da tag `<html>`, garantindo acessibilidade visual sob diferentes condições de luz.
+* **Resolução de Hidratação:** Aplicação de `suppressHydrationWarning` no Root Layout para suportar injeções de segurança do cliente (como antivírus Kaspersky) e scripts de definição de tema que modificam a árvore DOM antes da hidratação do React.
 
-### Banco de Dados (Supabase)
-- PostgreSQL relacional usado no plano gratuito, gerenciando armazenamento seguro e persistente dos tickets e imagens dos cidadãos.
+### 5.2. Backend (Node.js, Express, Socket.io)
+* **Servidor HTTP REST:** Fornece rotas estruturadas com controllers separados para mensagens (`chatController`) e chamados (`ticketController`).
+* **WebSockets Bidirecionais (Socket.io):** Estabelece comunicação bidirecional com canais dedicados para o chatbot (eventos `chat_message` e `audio_message`) e sincronização em tempo real do painel administrativo (broadcasting de eventos `new_ticket`, `update_ticket` e `delete_ticket`).
+* **Buffer de Alta Capacidade para Mídias:** Configuração de `maxHttpBufferSize: 1e8` (100MB) para receber imagens de alta resolução convertidas em Base64 a partir do celular sem rejeição ou limite de buffer.
+* **Segurança das Variáveis de Ambiente:** Utilização do pacote `dotenv` para centralizar segredos do Supabase, chaves de API do Groq e webhooks do n8n de forma protegida e inacessível no cliente.
 
-### Inteligência Artificial (Groq)
-- Motor de LLM utilizando o modelo aberto *Mixtral-8x7b* para interpretação em baixíssima latência e *Whisper* para transcrição de áudio, operando sob a infraestrutura gratuita e ultra veloz do Groq.
+### 5.3. Banco de Dados e Storage (Supabase)
+* **Persistência Relacional (PostgreSQL):** Banco relacional hospedado na nuvem do Supabase, mapeando de forma segura as tabelas de `tickets` (chamados), `reports` (relatos individuais unificados por IA) e dados de usuários.
+* **Armazenamento de Objetos (Supabase Storage):** Bucket público de storage dedicado à persistência física das imagens de ocorrências enviadas pelos cidadãos, salvando o caminho/URL público correspondente na linha do ticket no banco.
+
+### 5.4. Inteligência Artificial (Groq API)
+* **Motor de Triagem Inteligente (Llama-3.3-70b):** IA com baixa latência configurada para interpretar linguagem natural, validar geograficamente o relato (garantindo exclusividade territorial de Diadema), detectar duplicidades de problemas na mesma área e consolidar múltiplos relatos de moradores em resumos únicos e executivos.
+* **Transcrição de Voz (Whisper-large-v3):** Transcreve áudios gravados pelo cidadão no formato `.webm` base64 de volta para texto em português de forma instantânea para inclusão no histórico de mensagens.
+
+### 5.5. Integração e Notificações (n8n, CallMeBot)
+* **Integração Baseada em Gatilhos:** Envio assíncrono de Webhooks HTTP contendo detalhes de status e dados do cidadão sempre que um administrador altera um chamado (ex: para "Resolvido").
+* **Serviço de WhatsApp:** O webhook do n8n recebe a alteração e despacha o alerta utilizando a API do CallMeBot para enviar a notificação instantaneamente no celular do morador que abriu o chamado.
+
+### 5.6. Detalhamento das Rotas da API (Endpoints REST)
+O backend do sistema expõe quatro endpoints HTTP REST para consulta e manipulação dos dados dos chamados:
+
+1. **`GET /api/tickets`**
+   - **Descrição:** Retorna a listagem completa de todos os chamados cadastrados no banco de dados.
+   - **Finalidade:** Utilizada pelo painel do administrador para renderizar a fila de ocorrências.
+   - **Formato de Resposta:** Array de objetos JSON contendo os dados de cada chamado (id, protocol, user_name, user_phone, description, status, priority, report_count, created_at).
+
+2. **`GET /api/tickets/user/:phone`**
+   - **Descrição:** Retorna todos os chamados associados a um telefone específico do cidadão.
+   - **Finalidade:** Utilizada pelo painel "Meus Chamados" no chatbot do cidadão para renderizar o seu histórico local de ocorrências.
+   - **Parâmetro:** `:phone` (string contendo o número formatado ou apenas dígitos).
+   - **Formato de Resposta:** Array de objetos JSON correspondentes aos chamados do usuário.
+
+3. **`PUT /api/tickets/:id/status`**
+   - **Descrição:** Altera a etapa de resolução de um chamado.
+   - **Finalidade:** Permite ao administrador marcar um chamado como "Aberto", "Em andamento" ou "Resolvido".
+   - **Payload do Request:** `{ "status": "Aberto" | "Em andamento" | "Resolvido" }`
+   - **Ações secundárias:** Caso o status seja alterado, o backend dispara um webhook HTTP para o n8n para notificar o cidadão via WhatsApp.
+
+4. **`PUT /api/tickets/:id/priority`**
+   - **Descrição:** Atualiza a prioridade/urgência do chamado.
+   - **Finalidade:** Permite ao administrador alterar manualmente a relevância do chamado ("Baixa", "Média", "Alta", "Urgente").
+   - **Payload do Request:** `{ "priority": "Baixa" | "Média" | "Alta" | "Urgente" }`
+
+### 5.7. Detalhamento dos Eventos WebSockets (Socket.io)
+A comunicação bidirecional em tempo real do sistema utiliza os seguintes canais de eventos via Socket.io:
+
+* **Eventos Recebidos pelo Servidor (Escutados do Cliente):**
+  - **`chat_message`**: Disparado pelo chatbot quando o cidadão envia um texto ou localização. Recebe `{ user: { name, phone }, text, isInitial }`. O servidor responde gerando o diálogo por IA, validando localidade ou salvando novos chamados.
+  - **`audio_message`**: Disparado pelo chatbot quando o cidadão envia um áudio gravado em base64. Recebe `{ id, audioBase64, user }`. O servidor transcreve o áudio via Whisper e processa o texto resultante no fluxo do chat.
+
+* **Eventos Enviados pelo Servidor (Emitidos para os Clientes):**
+  - **`bot_response`**: Retorna a resposta textual do assistente de IA para ser renderizada na tela do cidadão.
+  - **`bot_typing`**: Envia um estado booleano (`true`/`false`) para exibir ou esconder o indicador de digitação ("Analisando...") no chat do cidadão.
+  - **`audio_transcribed`**: Retorna a transcrição do áudio enviado pelo cidadão para atualizar a respectiva bolha de chat na tela.
+  - **`new_ticket`**: Disparado via broadcast para todos os administradores conectados quando um novo chamado é registrado, inserindo o chamado na fila instantaneamente.
+  - **`update_ticket`**: Disparado via broadcast para os administradores sempre que dados, prioridade ou status de um ticket são modificados.
+  - **`delete_ticket`**: Disparado via broadcast para os administradores para remover chamados apagados do painel em tempo real.
 
 ---
 
